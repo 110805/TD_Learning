@@ -850,7 +850,7 @@ int main(int argc, const char* argv[]) {
 
 	// set the learning parameters
 	float alpha = 0.1;
-	size_t total = 100000;
+	size_t total = 500000;
 	unsigned seed;
 	__asm__ __volatile__ ("rdtsc" : "=a" (seed));
 	info << "alpha = " << alpha << std::endl;
@@ -869,6 +869,8 @@ int main(int argc, const char* argv[]) {
 
 	// train the model
 	std::vector<state> path;
+	std::vector<float> allscores_1000;
+	float score_1000 = 0;
 	path.reserve(20000);
 	for (size_t n = 1; n <= total; n++) {
 		board b;
@@ -894,13 +896,24 @@ int main(int argc, const char* argv[]) {
 		debug << "end episode" << std::endl;
 
 		// update by TD(0)
+		score_1000 += score;
+		if(n%1000 == 0)
+		{
+			allscores_1000.push_back(score_1000/1000);
+			score_1000 = 0;
+		}
+
 		tdl.update_episode(path, alpha);
 		tdl.make_statistic(n, b, score);
 		path.clear();
 	}
+	
+	// store the scores for each 1000 episodes
+	std::ofstream outFile("/home/ubuntu/TD_Learning/score.txt");
+	for (const auto &e : allscores_1000) outFile << e << "\n";
 
 	// store the model into file
 	tdl.save("/home/ubuntu/TD_Learning/weights.bin");
-
+	
 	return 0;
 }
